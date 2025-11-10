@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
-	"os/signal"
 
 	"github.com/Gfarf/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/Gfarf/learn-pub-sub-starter/internal/pubsub"
@@ -27,10 +27,42 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	pubsub.DeclareAndBind(conn, routing.ExchangePerilDirect, fmt.Sprintf("%s.%s", routing.PauseKey, username), routing.PauseKey, 1)
-	// wait for ctrl+c
+	gs := gamelogic.NewGameState(username)
+
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilDirect,
+		routing.PauseKey+"."+gs.GetUsername(),
+		routing.PauseKey,
+		pubsub.SimpleQueueTransient,
+		handlerPause(gs),
+	)
+	if err != nil {
+		log.Fatalf("could not subscribe to pause: %v", err)
+	}
+	for {
+		commands := gamelogic.GetInput()
+		switch commands[0] {
+		case "spawn":
+			gs.CommandSpawn(commands)
+		case "move":
+			gs.CommandMove(commands)
+		case "status":
+			gs.CommandStatus()
+		case "help":
+			gamelogic.PrintClientHelp()
+		case "spam":
+			fmt.Println("Spamming not allowed yet!")
+		case "quit":
+			gamelogic.PrintQuit()
+			return
+		default:
+			fmt.Println("invalid command, try again")
+		}
+	}
+	/* wait for ctrl+c
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 	<-signalChan
-	fmt.Println("Closing server from signal...")
+	fmt.Println("Closing server from signal...")*/
 }

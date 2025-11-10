@@ -27,6 +27,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	pubsub.DeclareAndBind(conn, routing.ExchangePerilTopic, routing.GameLogSlug, "game_logs.*", pubsub.SimpleQueueDurable)
 gameFor:
 	for {
 		commands := gamelogic.GetInput()
