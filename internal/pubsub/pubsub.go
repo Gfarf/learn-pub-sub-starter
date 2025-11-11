@@ -11,9 +11,12 @@ func DeclareAndBind(conn *amqp.Connection, exchange, queueName, key string, queu
 	if err != nil {
 		return nil, amqp.Queue{}, err
 	}
+	args := amqp.Table{
+		"x-dead-letter-exchange": "peril_dlx",
+	}
 	switch queueType {
 	case SimpleQueueDurable:
-		newQueue, err := newChannel.QueueDeclare(queueName, true, false, false, false, nil)
+		newQueue, err := newChannel.QueueDeclare(queueName, true, false, false, false, args)
 		if err != nil {
 			return nil, amqp.Queue{}, err
 		}
@@ -23,7 +26,7 @@ func DeclareAndBind(conn *amqp.Connection, exchange, queueName, key string, queu
 		}
 		return newChannel, newQueue, nil
 	case SimpleQueueTransient:
-		newQueue, err := newChannel.QueueDeclare(queueName, false, true, true, false, nil)
+		newQueue, err := newChannel.QueueDeclare(queueName, false, true, true, false, args)
 		if err != nil {
 			return nil, amqp.Queue{}, err
 		}
