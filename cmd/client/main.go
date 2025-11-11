@@ -40,13 +40,40 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not subscribe to pause: %v", err)
 	}
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		routing.ArmyMovesPrefix+"."+username,
+		routing.ArmyMovesPrefix+".*",
+		pubsub.SimpleQueueTransient,
+		handlerMove(gs),
+	)
+	if err != nil {
+		log.Fatalf("could not subscribe to moves: %v", err)
+	}
 	for {
 		commands := gamelogic.GetInput()
 		switch commands[0] {
 		case "spawn":
 			gs.CommandSpawn(commands)
 		case "move":
-			gs.CommandMove(commands)
+			mv, err := gs.CommandMove(commands)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			NewChannel, err := conn.Channel()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			err = pubsub.PublishJSON(NewChannel, string(routing.ExchangePerilTopic), routing.ArmyMovesPrefix+"."+username, mv)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			} else {
+				fmt.Printf("Move correctly published: %v\n", mv)
+			}
 		case "status":
 			gs.CommandStatus()
 		case "help":
